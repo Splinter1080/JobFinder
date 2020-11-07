@@ -1,27 +1,27 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema ;
+const Schema = mongoose.Schema;
 
 const JobSchema = new Schema({
-    name:{
-        type: String , 
-    } , 
+    name: {
+        type: String,
+    },
 
     jobType: {
-        type: String , 
-    } , 
+        type: String,
+    },
     description: {
-        type: String ,  
-    } , 
+        type: String,
+    },
     location: {
-        type: String , 
-         
-    } , 
+        type: String,
+
+    },
     salary: {
-        type: Number ,     
-    } , 
+        type: Number,
+    },
     city: {
-        type: String 
-    }, 
+        type: String
+    },
     userid: {
         type: String
     }
@@ -30,4 +30,4 @@ const JobSchema = new Schema({
     // }
 });
 
-module.exports = mongoose.model('Job' , JobSchema);
+module.exports = mongoose.model('Job', JobSchema);

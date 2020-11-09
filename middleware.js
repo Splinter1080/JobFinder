@@ -1,6 +1,6 @@
 
 const ExpressError = require('./utils/ExpressError');
-
+const User = require('./models/user');
 
 
 module.exports.isLoggedIn = (req, res, next ) => { 
@@ -12,3 +12,14 @@ module.exports.isLoggedIn = (req, res, next ) => {
     next();
 }
 
+module.exports.isEmployer = async( req, res , next ) => {
+    const  id  = req.params.id ; 
+    console.log(id) 
+    const users = await User.findById(id);
+    console.log(users) 
+    if(users.emp) {
+        req.flash('error' , ' You do not have the permission !'); 
+        return res.redirect('/') ; 
+    }
+    next() ; 
+}

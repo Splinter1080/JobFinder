@@ -13,15 +13,15 @@ const Job = require('./models/jobs')
 const Host = require('./models/admin')
 const Message = require('./models/message')
 const corsAllow = require('./routes/cors');
-const accomodateRoute = require('./routes/accomodate');
-
+const helmet = require("helmet");
 var request = require('request');
+const {isLoggedIn} = require('./middleware')
 
-var headers = {
-    'webpushrKey': '0b0564d7baaab3d16b01d9d9000c42b0',
-    'webpushrAuthToken': '17179',
-    'Content-Type': 'application/json'
-};
+const app = express();
+app.use(cors())
+app.use(helmet({contentSecurityPolicy:false}))
+
+
 const LocalStrategy = require('passport-local')
 const mongoSanitize = require('express-mongo-sanitize');
 
@@ -31,6 +31,8 @@ const mongoSanitize = require('express-mongo-sanitize');
 //login route
 const userRoutes = require('./routes/users')
 const jobRoutes = require('./routes/jobs')
+const accomodateRoute = require('./routes/accomodate')
+
 const MongoDBStore = require("connect-mongo")(session);
 
 const dbUrl = 'mongodb+srv://sans:bowbow@codefury.gkzbe.mongodb.net/codefury?retryWrites=true&w=majority';
@@ -50,8 +52,7 @@ db.once("open", () => {
     console.log("Database connected");
 });
 
-const app = express();
-//app.use(cors())
+
 //CORS middleware
 app.use(function (req, res, next) {
     res.setHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type, Accept,Authorization,Origin");
@@ -60,6 +61,13 @@ app.use(function (req, res, next) {
     res.setHeader("Access-Control-Allow-Credentials", true);
     next();
 });
+// app.use(function(req, res, next) {
+//     res.setHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type, Accept,Authorization,Origin");
+//     res.setHeader("Access-Control-Allow-Origin", "*");
+//     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+//     res.setHeader("Access-Control-Allow-Credentials", true);
+//     next();
+//   });
 
 
 app.engine('ejs', ejsMate);
@@ -122,6 +130,7 @@ app.use((req, res, next) => {
 app.use('/', userRoutes);
 app.use('/', jobRoutes);
 app.use('/', accomodateRoute);
+
 // -----------------------------------
 
 
@@ -144,11 +153,13 @@ app.get('/search-job', corsAllow.corsWithOptions, (req, res) => {
     })
 })
 
-app.get('/apply', corsAllow.corsWithOptions, (req, res) => {
+app.get('/apply',isLoggedIn,  corsAllow.corsWithOptions, (req, res) => {
     Job.find({ _id: req.query.jobid }, function (err, val) {
-
-        if (err) console.log(err)
-        else res.render('apply', { jobs: val[0] })
+User.find({toJobId: req.query.jobid}, function (err, user) {
+    if (err) console.log(err)
+    else res.render('apply', { jobs: val[0],applied:user })
+})
+        
 
     })
 })
@@ -157,7 +168,7 @@ io.on("connection", () => {
     console.log("a user is connected")
 })
 
-app.get('/messages', corsAllow.corsWithOptions, (req, res) => {
+app.get('/messages', isLoggedIn , corsAllow.corsWithOptions, (req, res) => {
 
     Message.find({ userid: req.query.id }, (err, messages) => {
         if (err) res.send(err)
@@ -167,19 +178,29 @@ app.get('/messages', corsAllow.corsWithOptions, (req, res) => {
 
 })
 
-app.post('/messages/:id/:name', corsAllow.corsWithOptions, (req, res) => {
+app.post('/messages/:id/:name',isLoggedIn,  corsAllow.corsWithOptions, (req, res) => {
+Message.insertMany({
+    name: req.params.name, message: req.body.message, userid: req.params.id
+},(err,result)=>{
+    if (err){
+        console.log(err)
+        sendStatus(500);
 
-    var message = new Message({ name: req.params.name, message: req.body.message, userid: req.params.id });
-    message.save((err) => {
-        if (err)
-            sendStatus(500);
-        io.emit('message', message);
-        res.sendStatus(200);
-    })
+    }
+   
+    var message={
+        name: req.params.name, message: req.body.message, userid: req.params.id
+    }
+io.emit('message', message);
+res.sendStatus(200);
+})
+
+    
 })
 
 
-app.post('/apply/:user', corsAllow.corsWithOptions, (req, res) => {
+
+app.post('/apply/:user',isLoggedIn, corsAllow.corsWithOptions, (req, res) => {
 
     Job.find({ _id: req.body.id }, (err, job) => {
         User.updateOne({ _id: req.params.user }, {
@@ -203,10 +224,13 @@ app.post('/apply/:user', corsAllow.corsWithOptions, (req, res) => {
         })
 
 
-
         User.find({ _id: job[0].userid }, function (error, user) {
-            var sid = user[0].sid
-            var data = { "title": "Your request has been accepted!", "message": "notification message", "target_url": "https://www.webpushr.com", "sid": `${sid}` };
+           var headers = {
+            'webpushrKey': '219678368976a36dac66b82419a40bb4',
+            'webpushrAuthToken': '17199',
+            'Content-Type': 'application/json'
+        };
+            var data = { "title": "Your request has been accepted!", "message": "notification message", "target_url": "https://www.shuxton.herokuapp.com", "sid":user[0].sid };
             var dataString = JSON.stringify(data);
             var options = {
                 url: 'https://api.webpushr.com/v1/notification/send/sid',
@@ -219,6 +243,9 @@ app.post('/apply/:user', corsAllow.corsWithOptions, (req, res) => {
                 if (!error && response.statusCode == 200) {
                     console.log(body);
                 }
+                else console.log(response.statusCode)
+                res.sendStatus(200);
+
             }
 
             request(options, callback);
@@ -227,7 +254,7 @@ app.post('/apply/:user', corsAllow.corsWithOptions, (req, res) => {
     })
 })
 
-app.post('/cancel/:user', corsAllow.corsWithOptions, (req, res) => {
+app.post('/cancel/:user', isLoggedIn , corsAllow.corsWithOptions, (req, res) => {
 
     Job.find({ _id: req.body.id }, (err, job) => {
         User.updateOne({ _id: req.params.user }, {
@@ -249,7 +276,10 @@ app.post('/cancel/:user', corsAllow.corsWithOptions, (req, res) => {
             if (err)
                 console.log(err)
         })
+        Message.deleteMany({userid:req.body.id})
     })
+    res.sendStatus(200);
+
 })
 
 app.post('/sid/:user', corsAllow.corsWithOptions, (req, res) => {
@@ -261,9 +291,13 @@ app.post('/sid/:user', corsAllow.corsWithOptions, (req, res) => {
         if (err)
             console.log(err)
     })
+    res.sendStatus(200);
+
 })
 
-
+app.get('/chat',isLoggedIn ,(req,res)=>{
+    res.render("chat")
+})
 
 // -----------------------------------
 

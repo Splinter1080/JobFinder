@@ -6,13 +6,12 @@
         <div class="col-md-6 offset-md-3 col-xl-4 offset-xl-4">
             <div class="card shadow">
                 <div class="card-body">
-                    <h5 class="card-title" style="text-align: center;
-                    margin-right: 27px;"><strong>Post A job</strong></h5>
-                    <form action="/employer/<%=currentUser._id%>" method="POST" class="validated-form" novalidate>
+                    <h5 class="card-title">Edit a job </h5>
+                    <form action="/employer/edit/<%=currentUser._id%>/<%=jobs._id%>" method="POST" class="validated-form" novalidate>
             
                         <div class="mb-3">
                             <label class="form-label" for="jobType">Job Title</label>
-                            <input class="form-control" list="jobl" type="text" id="jobType" name="jobType" autofocus required>
+                            <input class="form-control" list="jobl" type="text" id="jobType" name="jobType" autofocus required value="<%=jobs.jobType%>">
                             <datalist id="jobl">
                                 
                                 </datalist>
@@ -24,15 +23,15 @@
 
                         <div class="mb-3">
                             <label class="form-label" for="description">Description</label>
-                            <textarea class="form-control" name="description" id="description" cols="30" rows="3" required></textarea>
+                            <textarea class="form-control" name="description" id="description" cols="30" rows="3" required ><%=jobs.description%></textarea>
                             <div class="valid-feedback">
                                 Looks good!
                             </div>
                         </div>
                         <div class="mb-3">
-                            <input class="form-control" type="text" id="location" name="location" autofocus required placeholder="Address">
+                            <input class="form-control" type="text" id="location" name="location" autofocus required placeholder="Address" value="<%=jobs.location%>">
                             
-                            <input class="form-control" type="text" id="city" name="city" autofocus required placeholder="City">
+                            <input class="form-control" type="text" id="city" name="city" autofocus required placeholder="City" value="<%=jobs.city%>">
 
                             <br>
                            <div class="btn btn-primary" onclick="getCoordintes()"> <i class="material-icons">my_location</i></div>  
@@ -43,7 +42,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="salary">Salary</label>
-                            <input class="form-control" type="text" id="salary" name="salary" autofocus required>
+                            <input class="form-control" type="text" id="salary" name="salary" autofocus required value="<%=jobs.salary%>">
                             <div class="valid-feedback">
                                 Looks good!
                             </div>
